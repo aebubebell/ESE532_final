@@ -13,6 +13,7 @@ Zhiye Zhang
 #include <unordered_map>
 #include "utility.h"
 #include<bits/stdc++.h>
+#include<fstream>
 using namespace std;
 
 #define WIN_SIZE 16
@@ -94,14 +95,24 @@ void test_lzw( const char* file )//test whether the cdc function works
 		if(header%2 ==0)
 		{
 			std::vector<int> LZW=LZWencoding(Chunk_array[i],static_cast<int>(sizeof(Chunk_array[i])/sizeof(unsigned char)));
+            // int j=0;
+            //     while(LZW[j]!=NULL)
+            // {
+            //     std::cout<<LZW[j]<<"    ";
+            //     j++;
+            // }
+            // std::cout<<"&::"<<LZW.size()<<std::endl;
             uint32_t encode_array[LZW.size()];
+            //std::cout<<LZW.size()<<std::endl;
             for(int j =0;j<LZW.size();j++)
             {
                 encode_array[j]=(uint32_t)LZW[j];
+                //std::cout<<encode_array[j]<<"   "<<LZW[j]<<std::endl;
             }
             Send_data[i]=(unsigned char*)malloc(sizeof(encode_array)+4);
-            header= sizeof(encode_array)<<1;
+            header= LZW.size()<<1;
             memcpy(Send_data[i],&header,4);
+            std::cout<<Send_data[i]<<std::endl;
             memcpy(Send_data[i]+4,&encode_array,sizeof(encode_array));
 		}
 		else
@@ -109,11 +120,28 @@ void test_lzw( const char* file )//test whether the cdc function works
             Send_data[i]=(unsigned char*)malloc(4);
 			memcpy(Send_data[i],&header,4);
 		}
+
 	}
-    free(Send_data);
-    free(buff);
-    return;
-}
+//     std::ofstream outputFile("output.txt"); // Open a file named "output.txt" for writing
+
+//     if (outputFile.is_open()) 
+//     {
+//         for(int i=0;i<chunks_num;i++)
+//         {
+//             outputFile << Send_data[i];
+//         }
+//         outputFile.close(); // Close the file when done
+//     } else {
+//         std::cerr << "Failed to open the file." << std::endl;
+//     }
+//     for(int i=0;i<chunks_num;i++)
+//     {
+//         //std::cout<< Send_data[i]<<std::endl;
+//         free(Send_data[i]);
+//     }
+//     free(buff);
+//     return;
+// }
 int main()
 {
 
