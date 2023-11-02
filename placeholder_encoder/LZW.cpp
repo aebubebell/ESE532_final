@@ -91,23 +91,26 @@ void test_lzw( const char* file )//test whether the cdc function works
 		int chunk_length= static_cast<int>(sizeof(Chunk_array[i])/sizeof(unsigned char));
 		//std::cout<<cmd(Chunk_array[i],chunk_length,chunktable)<<std::endl;
 		uint32_t header=cmd(Chunk_array[i],chunk_length,chunktable);
-		if(header %2 ==0)
+		if(header%2 ==0)
 		{
 			std::vector<int> LZW=LZWencoding(Chunk_array[i],static_cast<int>(sizeof(Chunk_array[i])/sizeof(unsigned char)));
             uint32_t encode_array[LZW.size()];
             for(int j =0;j<LZW.size();j++)
             {
                 encode_array[j]=(uint32_t)LZW[j];
-                header= sizeof(encode_array)<<1;
-                memcpy(Send_data[i],&header,4);
-                memcpy(Send_data[i]+4,&encode_array,sizeof(encode_array));
             }
+            Send_data[i]=(unsigned char*)malloc(sizeof(encode_array)+4);
+            header= sizeof(encode_array)<<1;
+            memcpy(Send_data[i],&header,4);
+            memcpy(Send_data[i]+4,&encode_array,sizeof(encode_array));
 		}
 		else
 		{
+            Send_data[i]=(unsigned char*)malloc(4);
 			memcpy(Send_data[i],&header,4);
 		}
 	}
+    free(Send_data);
     free(buff);
     return;
 }
