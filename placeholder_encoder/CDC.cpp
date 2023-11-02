@@ -128,13 +128,13 @@ void test_cdc( const char* file )//test whether the cdc function works
 	create_chunks(Chunk_array,boundary,buff,file_size);
 	//std::cout<< chunks_num<<std::endl;
 	//test_boundary(boundary,file_size);
-	test_chunks(Chunk_array,chunks_num);
+	//test_chunks(Chunk_array,chunks_num);
     free(buff);
     return;
 }
 
-int main()//main function use to test whether the cdc function works.
-{
-	test_cdc("LittlePrince.txt");
-	return 0;
-}
+// int main()//main function use to test whether the cdc function works.
+// {
+// 	test_cdc("LittlePrince.txt");
+// 	return 0;
+// }
