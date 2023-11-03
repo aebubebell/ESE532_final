@@ -91,7 +91,8 @@ void test_lzw( const char* file )//test whether the cdc function works
 	{
 		int chunk_length= static_cast<int>(sizeof(Chunk_array[i])/sizeof(unsigned char));
 		//std::cout<<cmd(Chunk_array[i],chunk_length,chunktable)<<std::endl;
-		uint32_t header=cmd(Chunk_array[i],chunk_length,chunktable);
+        uint32_t header;
+		header=cmd(Chunk_array[i],chunk_length,chunktable);
 		if(header%2 ==0)
 		{
 			std::vector<int> LZW=LZWencoding(Chunk_array[i],static_cast<int>(sizeof(Chunk_array[i])/sizeof(unsigned char)));
@@ -110,15 +111,24 @@ void test_lzw( const char* file )//test whether the cdc function works
                 //std::cout<<encode_array[j]<<"   "<<LZW[j]<<std::endl;
             }
             Send_data[i]=(unsigned char*)malloc(sizeof(encode_array)+4);
-            header= LZW.size()<<1;
+            //std::cout<<sizeof(encode_array)<<std::endl;
+            header= (sizeof(encode_array)<<1);
+            //std::cout<<sizeof(header)<<"    "<<*&header<<std::endl;
             memcpy(Send_data[i],&header,4);
-            std::cout<<Send_data[i]<<std::endl;
             memcpy(Send_data[i]+4,&encode_array,sizeof(encode_array));
+            // for(int j=0;j<sizeof(encode_array)+4;j++)
+            // {
+            //     std::cout<<Send_data[i]+j;
+            // }
+            // std::cout<<";"<<std::endl;
 		}
 		else
 		{
-            Send_data[i]=(unsigned char*)malloc(4);
-			memcpy(Send_data[i],&header,4);
+            Send_data[i]=(unsigned char*)malloc(sizeof(header));
+            std::cout<< &header<<" ; "<<header<<std::endl;
+			memcpy(Send_data[i],&header,sizeof(header));
+            std::cout<<Send_data[i]+1;
+            std::cout<<";"<<std::endl;
 		}
 
 	}
@@ -134,17 +144,21 @@ void test_lzw( const char* file )//test whether the cdc function works
 //     } else {
 //         std::cerr << "Failed to open the file." << std::endl;
 //     }
-//     for(int i=0;i<chunks_num;i++)
-//     {
-//         //std::cout<< Send_data[i]<<std::endl;
-//         free(Send_data[i]);
-//     }
-//     free(buff);
-//     return;
-// }
+    for(int i=0;i<chunks_num;i++)
+    {
+        //std::cout<< Chunk_array[i]<<std::endl;
+        for(int j=0;j<sizeof(Send_data[i]);j++)
+        {
+            //std::cout<< Send_data[i][j];
+        }
+        //std::cout<<std::endl;
+        free(Send_data[i]);
+    }
+    free(buff);
+    return;
+}
 int main()
 {
-
     test_lzw("LittlePrince.txt");
 	return 0;
 }
