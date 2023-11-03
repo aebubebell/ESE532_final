@@ -124,11 +124,27 @@ void test_lzw( const char* file )//test whether the cdc function works
 		}
 		else
 		{
+            
             Send_data[i]=(unsigned char*)malloc(sizeof(header));
-            std::cout<< &header<<" ; "<<header<<std::endl;
-			memcpy(Send_data[i],&header,sizeof(header));
-            std::cout<<Send_data[i]+1;
-            std::cout<<";"<<std::endl;
+
+            // if(Send_data[i]==nullptr)
+            // {
+            //     std:cerr<<"failed";
+            // }
+            std::cout << &header<<" ; "<<header<<std::endl;
+            
+            
+
+			memcpy(Send_data[i], &header,sizeof(header));
+
+            std::cout << int(*Send_data[i]) << std::endl;
+            
+            
+            // std::cout << "Header content at Send_data[" << i << "]: "; 
+            // for (size_t j = 0; j < sizeof(header); ++j) { 
+            //     std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(Send_data[i][j]) << " "; 
+            //     } 
+            //     std::cout << std::dec << std::endl;
 		}
 
 	}
