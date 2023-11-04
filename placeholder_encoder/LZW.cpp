@@ -87,6 +87,15 @@ void test_lzw( const char* file )//test whether the cdc function works
    //test_hash(Chunk_array,chunks_num,hash);
 	std::unordered_map<uint64_t,uint32_t> chunktable;
 	unsigned char* Send_data[chunks_num];
+    std::ofstream outputFile("output.txt"); // Open a file named "output.txt" for writing
+    if (outputFile.is_open())
+    {
+        std::cout << "File open" << std::endl;
+    }
+    else
+    {
+        std::cerr << "Failed to open the file." << std::endl;
+    }
 	for(int i=0;i<chunks_num;i++)
 	{
 		int chunk_length= static_cast<int>(sizeof(Chunk_array[i])/sizeof(unsigned char));
@@ -114,13 +123,16 @@ void test_lzw( const char* file )//test whether the cdc function works
             //std::cout<<sizeof(encode_array)<<std::endl;
             header= (sizeof(encode_array)<<1);
             //std::cout<<sizeof(header)<<"    "<<*&header<<std::endl;
+
+            outputFile << header;
+            std::cout<<"writing header to file:"<<header<<std::endl;
             memcpy(Send_data[i],&header,4);
-            memcpy(Send_data[i]+4,&encode_array,sizeof(encode_array));
-            // for(int j=0;j<sizeof(encode_array)+4;j++)
-            // {
-            //     std::cout<<Send_data[i]+j;
-            // }
-            // std::cout<<";"<<std::endl;
+            memcpy(Send_data[i]+4j,&encode_array,sizeof(encode_array));
+            for(int j=0;j<LZW.size();j++)
+             {
+                 outputFile << *encode_array+j;
+                 std::cout<<"writing encode_array to file:"<<*(encode_array+j)<<std::endl;
+             }
 		}
 		else
 		{
@@ -131,13 +143,12 @@ void test_lzw( const char* file )//test whether the cdc function works
             // {
             //     std:cerr<<"failed";
             // }
-            std::cout << &header<<" ; "<<header<<std::endl;
-            
-            
+            //std::cout << &header<<" ; "<<header<<std::endl;
+            std::cout<<"writing header to file:"<<header<<std::endl;
+            outputFile << header;
+            memcpy(Send_data[i], &header,sizeof(header));
 
-			memcpy(Send_data[i], &header,sizeof(header));
-
-            std::cout << int(*Send_data[i]) << std::endl;
+           // std::cout << int(*Send_data[i]) << std::endl;
             
             
             // std::cout << "Header content at Send_data[" << i << "]: "; 
@@ -148,18 +159,18 @@ void test_lzw( const char* file )//test whether the cdc function works
 		}
 
 	}
-//     std::ofstream outputFile("output.txt"); // Open a file named "output.txt" for writing
-
-//     if (outputFile.is_open()) 
-//     {
-//         for(int i=0;i<chunks_num;i++)
-//         {
-//             outputFile << Send_data[i];
-//         }
-//         outputFile.close(); // Close the file when done
-//     } else {
-//         std::cerr << "Failed to open the file." << std::endl;
-//     }
+    // std::ofstream outputFile("output.txt"); // Open a file named "output.txt" for writing
+    //
+    // if (outputFile.is_open())
+    // {
+    //     for(int i=0;i<chunks_num;i++)
+    //     {
+    //         outputFile << Send_data[i];
+    //     }
+    //     outputFile.close(); // Close the file when done
+    // } else {
+    //     std::cerr << "Failed to open the file." << std::endl;
+    // }
     for(int i=0;i<chunks_num;i++)
     {
         //std::cout<< Chunk_array[i]<<std::endl;
@@ -171,6 +182,7 @@ void test_lzw( const char* file )//test whether the cdc function works
         free(Send_data[i]);
     }
     free(buff);
+    outputFile.close(); // Close the file when done
     return;
 }
 int main()
