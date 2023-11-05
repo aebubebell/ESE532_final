@@ -127,7 +127,7 @@ void test_lzw( const char* file )//test whether the cdc function works
             outputFile << header;
             std::cout<<"writing header to file:"<<header<<std::endl;
             memcpy(Send_data[i],&header,4);
-            memcpy(Send_data[i]+4j,&encode_array,sizeof(encode_array));
+            memcpy(Send_data[i]+4,&encode_array,sizeof(encode_array));
             for(int j=0;j<LZW.size();j++)
              {
                  outputFile << *encode_array+j;
