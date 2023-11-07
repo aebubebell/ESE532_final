@@ -5,8 +5,8 @@ LDFLAGS = -lpthread -pthread
 EXECUTABLES = cdc cmd lzw
 
 CDC_SRC = $(wildcard ./CDC.cpp)
-CMD_SRC = $(wildcard ./CDC.cpp ./CMD.cpp)
-LZW_SRC = $(wildcard ./CDC.cpp ./CMD.cpp ./LZW.cpp)
+CMD_SRC = $(wildcard ./CDC.cpp ./CMD.cpp ./sha256.c)
+LZW_SRC = $(wildcard ./CDC.cpp ./CMD.cpp ./LZW.cpp ./sha256.c)
 
 .PHONY: clean
 

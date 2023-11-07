@@ -9,7 +9,7 @@ Zhiye Zhang
 #include <stdint.h>
 #include <math.h>
 #include <string.h>
-#include<iostream> 
+#include<iostream>
 #include "utility.h"
 //parameter
 #define WIN_SIZE 16
@@ -43,7 +43,7 @@ int cdc(unsigned char *buff, unsigned int buff_size,  unsigned char ** chunk)//c
 		else//for other iteration
 		{
 			hash = hash * PRIME - static_cast<uint64_t>(buff[i - 1]) * pow(PRIME, WIN_SIZE + 1) + static_cast<uint64_t>(buff[i - 1 + WIN_SIZE]) * PRIME;//rolling hash
-		}	
+		}
         if((hash % MODULUS) == TARGET || (i == buff_size-WIN_SIZE-1))//if hash met particular value
 		{
            chunk[index]=(unsigned char*)malloc(sizeof(unsigned char)* MAX_CHUNK);
@@ -62,9 +62,9 @@ int cdc(unsigned char *buff, unsigned int buff_size,  unsigned char ** chunk)//c
     return index;
 }
 /*
-In cdc function, I created a bool array with the same size of buffer, 
+In cdc function, I created a bool array with the same size of buffer,
 whenver the cdc hash met target, the same index in arry is true,
-otherwise is false. 
+otherwise is false.
 */
 // void create_chunks(unsigned char ** chunk,bool* boundary,unsigned char *buff, unsigned int buff_size)
 // {
@@ -119,7 +119,7 @@ void test_cdc( const char* file )//test whether the cdc function works
 	int file_size = ftell(fp); // get current file pointer
 	fseek(fp, 0, SEEK_SET); // seek back to beginning of file
 
-	unsigned char* buff = (unsigned char *)malloc((sizeof(unsigned char) * file_size ));	
+	unsigned char* buff = (unsigned char *)malloc((sizeof(unsigned char) * file_size ));
 	if(buff == NULL)
 	{
 		perror("not enough space");
@@ -129,14 +129,14 @@ void test_cdc( const char* file )//test whether the cdc function works
 
 	fread(&buff[0],sizeof(unsigned char),file_size,fp);
 	unsigned char* Chunk_array[MAX_NUM];
-	int chunk_num=cdc(buff,file_size,Chunk_array);
-	test_chunks(Chunk_array,chunk_num);
+	int chunks_num=cdc(buff,file_size,Chunk_array);
+	//test_chunks(Chunk_array,chunk_num);
     free(buff);
     return;
 }
 
-int main()//main function use to test whether the cdc function works.
-{
-	test_cdc("LittlePrince.txt");
-	return 0;
-}
+// int main()//main function use to test whether the cdc function works.
+// {
+// 	test_cdc("LittlePrince.txt");
+// 	return 0;
+// }

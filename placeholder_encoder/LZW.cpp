@@ -1,5 +1,5 @@
 /*
-Chunk matching with hash computing(currently using a bad hash)
+LZW encoding
 Zhiye Zhang
 11/2/2001
 */
@@ -23,40 +23,38 @@ using namespace std;
 #define MAX_CHUNK 4096
 #define MAX_NUM 256
 
-std::vector<int> LZWencoding(unsigned char* Chunk,int chunk_length)
+void LZWencoding(unsigned char* Chunk, int* encode_array,int& compress_length)
 {
-   std::unordered_map <std::string, int> dictionary;
-   for(int i =0;i<255;i++)
-   {
-        std::string ch="";
-        ch+=static_cast<char>(i);
-        dictionary[ch]=i;
-   }
-   std::string p="",c="";
-   p+=static_cast<char>(Chunk[0]);
-   int code =256;
-   std::vector<int> output_code;
-   for(int i=0;i<chunk_length;i++)
-   {
-        if(i != chunk_length-1 )
-        {
-            c+= static_cast<char>(Chunk[i+1]);
+       std::map<std::string, int> dictionary;
+    int nextCode = 256;
+    int index = 0;
+
+    // Initialize the dictionary with single character strings
+    for (int i = 0; i < 256; i++) {
+        dictionary[std::string(1, char(i))] = i;
+    }
+
+    std::string P = "";
+    while (*Chunk != '\0') {
+        char C = *Chunk;
+        std::string PC = P + C;
+        if (dictionary.find(PC) != dictionary.end()) {
+            P = PC;
+        } else {
+            // Store the code for P in the compressed array
+            encode_array[index++] = dictionary[P];
+
+            // Add P + C to the dictionary
+            dictionary[PC] = nextCode++;
+            P = C;
         }
-        if(dictionary.find(p+c)!= dictionary.end())
-        {
-            p=p+c;
-        }
-        else
-        {
-            output_code.push_back(dictionary[p]);
-            dictionary[p+c]=code;
-            code ++;
-            p=c;
-        }
-        c="";
-   }
-   output_code.push_back(dictionary[p]);
-   return output_code;
+
+        Chunk++;
+    }
+
+    // Store the code for the last character in the compressed array
+    encode_array[index++] = dictionary[P];
+    compress_length = index;
 }
 void test_lzw( const char* file )//test whether the cdc function works
 {
@@ -78,19 +76,16 @@ void test_lzw( const char* file )//test whether the cdc function works
 		return;
 	}
 
-	int bytes_read = fread(&buff[0],sizeof(unsigned char),file_size,fp);
-	bool* boundary = (bool*)malloc((sizeof(unsigned char)* file_size));
+	fread(&buff[0],sizeof(unsigned char),file_size,fp);
 	unsigned char* Chunk_array[MAX_NUM];
-	int chunks_num = cdc(buff, file_size, boundary);
-	create_chunks(Chunk_array,boundary,buff,file_size);
-    uint64_t* hash= (uint64_t*)malloc(sizeof(uint64_t)*chunks_num);
+	int chunks_num = cdc(buff, file_size,Chunk_array);
+    //uint64_t* hash= (uint64_t*)malloc(sizeof(uint64_t)*chunks_num);
    //test_hash(Chunk_array,chunks_num,hash);
-	std::unordered_map<uint64_t,uint32_t> chunktable;
-	unsigned char* Send_data[chunks_num];
-    std::ofstream outputFile("output.txt"); // Open a file named "output.txt" for writing
+	std::unordered_map<string,uint32_t> chunktable;
+    ofstream outputFile("compress.bin"); // Open a file named "output.txt" for writing
     if (outputFile.is_open())
     {
-        std::cout << "File open" << std::endl;
+        //std::cout << "File open" << std::endl;
     }
     else
     {
@@ -98,89 +93,37 @@ void test_lzw( const char* file )//test whether the cdc function works
     }
 	for(int i=0;i<chunks_num;i++)
 	{
-		int chunk_length= static_cast<int>(sizeof(Chunk_array[i])/sizeof(unsigned char));
-		//std::cout<<cmd(Chunk_array[i],chunk_length,chunktable)<<std::endl;
+		int chunk_length= 4096;
         uint32_t header;
 		header=cmd(Chunk_array[i],chunk_length,chunktable);
 		if(header%2 ==0)
 		{
-			std::vector<int> LZW=LZWencoding(Chunk_array[i],static_cast<int>(sizeof(Chunk_array[i])/sizeof(unsigned char)));
-            // int j=0;
-            //     while(LZW[j]!=NULL)
-            // {
-            //     std::cout<<LZW[j]<<"    ";
-            //     j++;
-            // }
-            // std::cout<<"&::"<<LZW.size()<<std::endl;
-            uint32_t encode_array[LZW.size()];
-            //std::cout<<LZW.size()<<std::endl;
-            for(int j =0;j<LZW.size();j++)
-            {
-                encode_array[j]=(uint32_t)LZW[j];
-                //std::cout<<encode_array[j]<<"   "<<LZW[j]<<std::endl;
-            }
-            Send_data[i]=(unsigned char*)malloc(sizeof(encode_array)+4);
-            //std::cout<<sizeof(encode_array)<<std::endl;
-            header= (sizeof(encode_array)<<1);
-            //std::cout<<sizeof(header)<<"    "<<*&header<<std::endl;
-
+            int* encode_array= (int*)malloc(sizeof(int)*MAX_NUM);
+            int compress_length;
+            LZWencoding(Chunk_array[0],encode_array,compress_length);
             outputFile << header;
-            std::cout<<"writing header to file:"<<header<<std::endl;
-            memcpy(Send_data[i],&header,4);
-            memcpy(Send_data[i]+4,&encode_array,sizeof(encode_array));
-            for(int j=0;j<LZW.size();j++)
+            for(int j=0;j<compress_length;j+=2)
              {
-                 outputFile << *encode_array+j;
-                 std::cout<<"writing encode_array to file:"<<*(encode_array+j)<<std::endl;
+                 uint8_t send=0;
+                // cout <<"The encode data1 is:"<<*(encode_array+j)<<endl;
+                // cout <<"The encode data2 is:"<<*(encode_array+j+1)<<endl;
+                send = ((uint8_t)*(encode_array+j))>>4;
+                outputFile << send;
+                // cout <<"The first Byte is:"<<std::hex<<(int)send<<endl;
+                send = (uint8_t)*(encode_array+j)<<4;
+                send |=(uint8_t)*(encode_array+j+1)>>8;
+                outputFile<<send;
+                // cout<<"The second Byte is:"<<std::hex<<(int)send<<endl;
+                send = (uint8_t)*(encode_array+j+1);
+                // cout<<"The third Byte is:"<<std::hex<<(int)send<<endl;
              }
 		}
 		else
 		{
-            
-            Send_data[i]=(unsigned char*)malloc(sizeof(header));
-
-            // if(Send_data[i]==nullptr)
-            // {
-            //     std:cerr<<"failed";
-            // }
-            //std::cout << &header<<" ; "<<header<<std::endl;
-            std::cout<<"writing header to file:"<<header<<std::endl;
             outputFile << header;
-            memcpy(Send_data[i], &header,sizeof(header));
-
-           // std::cout << int(*Send_data[i]) << std::endl;
-            
-            
-            // std::cout << "Header content at Send_data[" << i << "]: "; 
-            // for (size_t j = 0; j < sizeof(header); ++j) { 
-            //     std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(Send_data[i][j]) << " "; 
-            //     } 
-            //     std::cout << std::dec << std::endl;
 		}
 
 	}
-    // std::ofstream outputFile("output.txt"); // Open a file named "output.txt" for writing
-    //
-    // if (outputFile.is_open())
-    // {
-    //     for(int i=0;i<chunks_num;i++)
-    //     {
-    //         outputFile << Send_data[i];
-    //     }
-    //     outputFile.close(); // Close the file when done
-    // } else {
-    //     std::cerr << "Failed to open the file." << std::endl;
-    // }
-    for(int i=0;i<chunks_num;i++)
-    {
-        //std::cout<< Chunk_array[i]<<std::endl;
-        for(int j=0;j<sizeof(Send_data[i]);j++)
-        {
-            //std::cout<< Send_data[i][j];
-        }
-        //std::cout<<std::endl;
-        free(Send_data[i]);
-    }
     free(buff);
     outputFile.close(); // Close the file when done
     return;
