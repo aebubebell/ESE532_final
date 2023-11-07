@@ -41,7 +41,7 @@ void handle_input(int argc, char* argv[], int* blocksize) {
 
 int main(int argc, char* argv[]) {
 	stopwatch ethernet_timer;
-	unsigned char* input[NUM_PACKETS];
+	unsigned char* input[NUM_PACKETS];//8
 	int writer = 0;
 	int done = 0;
 	int length = 0;
