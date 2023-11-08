@@ -12,8 +12,10 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <fstream>
 #include "stopwatch.h"
-
+#include "utility.h"
+using namespace std;
 #define NUM_PACKETS 8
 #define pipe_depth 4
 #define DONE_BIT_L (1 << 7)
@@ -117,10 +119,66 @@ int main(int argc, char* argv[]) {
 		offset += length;
 		writer++;
 	}
+	unsigned char* Chunk_array[MAX_NUM];
+	int chunks_num=cdc(file,offset,Chunk_array);
+	std::unordered_map<string,uint32_t> chunktable;
+	unsigned char* DRAM;
+    offset=0;
+    DRAM = (unsigned char*)malloc(MAX_CHUNK*MAX_NUM);
+	for(int i=0;i<chunks_num;i++)
+	{
+		int chunk_length= MAX_CHUNK;
+        uint32_t header;
+		header=cmd(Chunk_array[i],chunk_length,chunktable);
+		if(header%2 ==0)
+		{
+            int* encode_array= (int*)malloc(sizeof(int)*MAX_CHUNK);
+            int compress_length;
+            LZWencoding(Chunk_array[i],encode_array,compress_length);
+			header=compress_length<<1;
+			memcpy(&DRAM[offset],&header,sizeof(uint32_t));
+            offset +=sizeof(uint32_t);
+			//cout<< "Write header:"<<header<<" to file"<<endl;
+            for(int j=0;j<compress_length;j+=2)
+             {
+                 uint8_t send=0;
+                //  cout <<"The encode data1 is:"<<*(encode_array+j)<<endl;
+                //  cout <<"The encode data2 is:"<<*(encode_array+j+1)<<endl;
+                send = *encode_array+j>>4;
+				memcpy(&DRAM[offset],&send,sizeof(uint8_t));
+                offset +=sizeof(uint8_t);
+                //  cout <<"The first Byte is:"<<std::hex<<(int)send<<endl;
+                send = *encode_array+j<<4;
+                send |=*encode_array+j+1>>8;
+                memcpy(&DRAM[offset],&send,sizeof(uint8_t));
+                offset +=sizeof(uint8_t);
+                //  cout<<"The second Byte is:"<<std::hex<<(int)send<<endl;
+                send = *encode_array+j+1 &0xFF;
+                //  cout<<"The third Byte is:"<<std::hex<<(int)send<<endl;
+				memcpy(&DRAM[offset],&send,sizeof(uint8_t));
+                offset +=sizeof(uint8_t);
+             }
+			if(compress_length%2 != 0)
+			{
+				uint8_t send;
+				send = (uint8_t)*(encode_array+compress_length-1)<<4;
+				memcpy(&DRAM[offset],&send,sizeof(uint8_t));
+                offset +=sizeof(uint8_t);
+			}
+			free(encode_array);
+		}
+		else
+		{
+			// cout<< "Write header:	"<<header<<"	to file"<<endl;
+            memcpy(&DRAM[offset],&header,sizeof(uint32_t));
+            offset +=sizeof(uint32_t);
+		}
 
+	}
+	
 	// write file to root and you can use diff tool on board
 	FILE *outfd = fopen("output_cpu.bin", "wb");
-	int bytes_written = fwrite(&file[0], 1, offset, outfd);
+	int bytes_written = fwrite(&DRAM[0], 1, offset, outfd);
 	printf("write file with %d\n", bytes_written);
 	fclose(outfd);
 
@@ -128,6 +186,7 @@ int main(int argc, char* argv[]) {
 		free(input[i]);
 	}
 
+	free(DRAM);
 	free(file);
 	std::cout << "--------------- Key Throughputs ---------------" << std::endl;
 	float ethernet_latency = ethernet_timer.latency() / 1000.0;

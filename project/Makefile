@@ -54,7 +54,7 @@ VPP_OPTS = --target hw
 CLIENT_SOURCES = Client/client.cpp
 CLIENT_EXE = client
 
-SERVER_SOURCES = Server/encoder.cpp Server/server.cpp
+SERVER_SOURCES = Server/encoder.cpp Server/server.cpp Server/CDC.cpp Server/CMD.cpp Server/LZW.cpp Server/sha256.c
 SERVER_OBJECTS =$(SERVER_SOURCES:.cpp=.o)
 SERVER_EXE = encoder
 
