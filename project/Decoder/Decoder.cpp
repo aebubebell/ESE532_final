@@ -40,13 +40,11 @@ static const std::string Decompress(size_t Size)
     Code_table.push_back(std::string(1, (char) i));
 
   int Old = Read_code();
-  cout<<Old<<endl;
   std::string Symbol(1, Old);
   std::string Output = Symbol;
   while (Input_position / 8 < Size - 1)
   {
     int New = Read_code();
-    cout<<New<<endl;
     std::string Symbols;
     if (New >= (int) Code_table.size())
       Symbols = Code_table[Old] + Symbol;
@@ -95,8 +93,9 @@ int main(int Parameter_count, char * Parameters[])
     if ((Header & 1) == 0)
     {
       int Chunk_size = Header >> 1;
+      //cout<<"Header:"<<Header<<endl;
       const std::string & Chunk = Decompress(Chunk_size);
-      cout<<"Header:"<<Header<<"  Chunk size"<<Chunk_size<<endl;
+     // cout <<"  Chunk size"<<Chunk_size<<endl;
       Chunks.push_back(Chunk);
       std::cout << "Decompressed chunk of size " << Chunk.length() << ".\n";
       Output.write(&Chunk[0], Chunk.length());

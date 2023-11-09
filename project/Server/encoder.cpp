@@ -7,6 +7,7 @@
 #include <iostream>
 #include "server.h"
 #include <unistd.h>
+#include <math.h>
 #include <fcntl.h>
 #include <pthread.h>
 #include <errno.h>
@@ -43,6 +44,7 @@ void handle_input(int argc, char* argv[], int* blocksize) {
 
 int main(int argc, char* argv[]) {
 	stopwatch ethernet_timer;
+	stopwatch throughput_timer;
 	unsigned char* input[NUM_PACKETS];//8
 	int writer = 0;
 	int done = 0;
@@ -77,8 +79,9 @@ int main(int argc, char* argv[]) {
 	count++;
 
 	// get packet
+	ethernet_timer.start();
 	unsigned char* buffer = input[writer];
-
+	ethernet_timer.stop();
 	// decode
 	done = buffer[1] & DONE_BIT_L;
 	length = buffer[0] | (buffer[1] << 8);
@@ -115,10 +118,16 @@ int main(int argc, char* argv[]) {
 		length &= ~DONE_BIT_H;
 		//printf("length: %d offset %d\n",length,offset);
 		memcpy(&file[offset], &buffer[HEADER], length);
-
 		offset += length;
 		writer++;
 	}
+	// FILE *uncompress = fopen("uncompress.bin", "wb");
+	// int uncompress_bytes_written = fwrite(&file[0], 1, offset, uncompress);
+	// printf("write uncompress file with %d\n",uncompress_bytes_written);
+	// fclose(uncompress);
+	int uncompress_bytes_written = offset;
+
+	throughput_timer.start();
 	unsigned char* Chunk_array[MAX_NUM];
 	int chunks_num=cdc(file,offset,Chunk_array);
 	std::unordered_map<string,uint32_t> chunktable;
@@ -135,51 +144,58 @@ int main(int argc, char* argv[]) {
             int* encode_array= (int*)malloc(sizeof(int)*MAX_CHUNK);
             int compress_length;
             LZWencoding(Chunk_array[i],encode_array,compress_length);
-			header=compress_length<<1;
-			memcpy(&DRAM[offset],&header,sizeof(uint32_t));
+			uint32_t compress_byte=ceil((12*(float)compress_length)/8);
+            //cout<<"The number of compress length is:"<<compress_length<<endl;
+            header=(uint32_t)compress_byte<<1;
+            //cout<< "Write header:	"<<header<<"	to file"<<endl;
+            memcpy(&DRAM[offset],&header,sizeof(uint32_t));
             offset +=sizeof(uint32_t);
-			//cout<< "Write header:"<<header<<" to file"<<endl;
-            for(int j=0;j<compress_length;j+=2)
-             {
-                 uint8_t send=0;
-                //  cout <<"The encode data1 is:"<<*(encode_array+j)<<endl;
-                //  cout <<"The encode data2 is:"<<*(encode_array+j+1)<<endl;
-                send = *encode_array+j>>4;
-				memcpy(&DRAM[offset],&send,sizeof(uint8_t));
-                offset +=sizeof(uint8_t);
-                //  cout <<"The first Byte is:"<<std::hex<<(int)send<<endl;
-                send = *encode_array+j<<4;
-                send |=*encode_array+j+1>>8;
-                memcpy(&DRAM[offset],&send,sizeof(uint8_t));
-                offset +=sizeof(uint8_t);
-                //  cout<<"The second Byte is:"<<std::hex<<(int)send<<endl;
-                send = *encode_array+j+1 &0xFF;
-                //  cout<<"The third Byte is:"<<std::hex<<(int)send<<endl;
-				memcpy(&DRAM[offset],&send,sizeof(uint8_t));
-                offset +=sizeof(uint8_t);
-             }
-			if(compress_length%2 != 0)
-			{
-				uint8_t send;
-				send = (uint8_t)*(encode_array+compress_length-1)<<4;
-				memcpy(&DRAM[offset],&send,sizeof(uint8_t));
-                offset +=sizeof(uint8_t);
-			}
+			for(int j=0;j<compress_length;j+=2)
+            {
+                if(compress_length-j == 1)
+                {
+                    uint8_t send=0;
+                    //cout<< "encode array:"<<*encode_array+compress_length-1<<" to mem"<<endl;
+                    send = *(encode_array+compress_length-1)>>4;
+                    //cout<< "send data:"<<(int)send<<" to mem"<<endl;
+                    memcpy(&DRAM[offset],&send,sizeof(uint8_t));
+                    offset +=sizeof(uint8_t);
+                    send = *(encode_array+compress_length-1)<<4;
+                    //cout<< "send data:"<<(int)send<<" to mem"<<endl;
+                    memcpy(&DRAM[offset],&send,sizeof(uint8_t));
+                    offset +=sizeof(uint8_t);
+                }
+                else
+                {
+                    uint8_t send=0;
+                    send = *(encode_array+j)>>4;
+                    memcpy(&DRAM[offset],&send,sizeof(uint8_t));
+                    offset +=sizeof(uint8_t);
+                    send = *(encode_array+j)<<4;
+                    send |= *(encode_array+j+1)>>8;
+                    memcpy(&DRAM[offset],&send,sizeof(uint8_t));
+                    offset +=sizeof(uint8_t);
+                    send = *(encode_array+j+1);
+                    memcpy(&DRAM[offset],&send,sizeof(uint8_t));
+                    offset +=sizeof(uint8_t);
+                }
+            }
 			free(encode_array);
 		}
 		else
 		{
-			// cout<< "Write header:	"<<header<<"	to file"<<endl;
+			//cout<< "Write header:	"<<header<<"	to file"<<endl;
             memcpy(&DRAM[offset],&header,sizeof(uint32_t));
             offset +=sizeof(uint32_t);
 		}
 
 	}
-	
+	throughput_timer.stop();
+
 	// write file to root and you can use diff tool on board
 	FILE *outfd = fopen("output_cpu.bin", "wb");
-	int bytes_written = fwrite(&DRAM[0], 1, offset, outfd);
-	printf("write file with %d\n", bytes_written);
+	int compress_bytes_written = fwrite(&DRAM[0], 1, offset, outfd);
+	printf("write file with %d\n", compress_bytes_written);
 	fclose(outfd);
 
 	for (int i = 0; i < NUM_PACKETS; i++) {
@@ -190,9 +206,15 @@ int main(int argc, char* argv[]) {
 	free(file);
 	std::cout << "--------------- Key Throughputs ---------------" << std::endl;
 	float ethernet_latency = ethernet_timer.latency() / 1000.0;
-	float input_throughput = (bytes_written * 8 / 1000000.0) / ethernet_latency; // Mb/s
+	float throughput_latency = throughput_timer.latency()/1000.0;
+	cout<< "input byte is: "<< uncompress_bytes_written<<endl;
+	float input_throughput = (uncompress_bytes_written * 8 / 1000000.0) / ethernet_latency; // Mb/s
+	float output_throughput = (uncompress_bytes_written * 8 / 1000000.0) / throughput_latency;
+	cout << "write compress byte is: "<< compress_bytes_written<<endl;
 	std::cout << "Input Throughput to Encoder: " << input_throughput << " Mb/s."
 			<< " (Latency: " << ethernet_latency << "s)." << std::endl;
+	std::cout << "Output Throughput to Encoder: " << output_throughput << " Mb/s."
+			<< " (Latency: " << throughput_latency << "s)." << std::endl;
 
 	return 0;
 }
