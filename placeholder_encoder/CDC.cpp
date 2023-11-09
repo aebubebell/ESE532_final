@@ -11,13 +11,6 @@ Zhiye Zhang
 #include <string.h>
 #include<iostream>
 #include "utility.h"
-//parameter
-#define WIN_SIZE 16
-#define PRIME 3
-#define MODULUS 256
-#define TARGET 0
-#define MAX_CHUNK 4096
-#define MAX_NUM 256
 
 uint64_t hash_func(unsigned char *input, unsigned int pos)//hash for cdc
 {

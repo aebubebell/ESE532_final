@@ -16,12 +16,6 @@ Zhiye Zhang
 #include<fstream>
 using namespace std;
 
-#define WIN_SIZE 16
-#define PRIME 3
-#define MODULUS 256
-#define TARGET 0
-#define MAX_CHUNK 8192
-#define MAX_NUM 256
 
 
 void LZWencoding(unsigned char* Chunk, int* encode_array,int& compress_length)
@@ -52,7 +46,6 @@ void LZWencoding(unsigned char* Chunk, int* encode_array,int& compress_length)
         Chunk++;
 
     }
-        cout<<endl;
     // Store the code for the last character in the compressed array
     encode_array[index++] = dictionary[P];
     compress_length = index;
@@ -91,65 +84,50 @@ void test_lzw( const char* file )//test whether the cdc function works
 		header=cmd(Chunk_array[i],chunk_length,chunktable);
 		if(header%2 ==0)
 		{
-            if(i==0)
-            {
-                cout<<"The chunk is:"<<endl<<Chunk_array[0]<<endl;
-                chunk_length=0;
-                int j=0;
-                while(*(Chunk_array[0]+j) !='\0')
-                {
-                    chunk_length++;
-                    j++;
-                }
-                cout<<"The chunks_length is:"<<chunk_length<<endl;
-            }
             int* encode_array= (int*)malloc(sizeof(int)*MAX_CHUNK);
             int compress_length=0;
             LZWencoding(Chunk_array[i],encode_array,compress_length);
-            if(i==0)
-            {
-                cout<<"The compress length is:"<<compress_length<<endl;
-                cout<<"The encode_array is:"<<endl;
-                for(int j=0;j<compress_length;j++)
-                {
-                    cout<<*encode_array+j<<" ";
-                }
-                cout<<endl;
-            }
-            header=(uint32_t)compress_length<<1;
-            //cout<< "Write header:	"<<header<<"	to file"<<endl;
+            uint32_t compress_byte=ceil((12*(float)compress_length)/8);
+            //cout<<"The number of compress length is:"<<compress_length<<endl;
+            header=(uint32_t)compress_byte<<1;
+            cout<<"The number of data is: "<<compress_length<<" The bytes of data is: "<<compress_byte<<endl;
+            cout<< "Write header:	"<<header<<"	to position: "<<hex<<offset<<dec<<endl;
             memcpy(&DRAM[offset],&header,sizeof(uint32_t));
             offset +=sizeof(uint32_t);
             for(int j=0;j<compress_length;j+=2)
-             {
-                uint8_t send=0;
-                send = *encode_array+j>>4;
-                memcpy(&DRAM[offset],&send,sizeof(uint8_t));
-                if(i==0)
+            {
+                if(compress_length-j == 1)
                 {
-                    cout<<(int)send<<" ";
+                    uint8_t send=0;
+                    //cout<< "encode array:"<<*encode_array+compress_length-1<<" to mem"<<endl;
+                    send = *(encode_array+compress_length-1)>>4;
+                    //cout<< "send data:"<<(int)send<<" to mem"<<endl;
+                    memcpy(&DRAM[offset],&send,sizeof(uint8_t));
+                    offset +=sizeof(uint8_t);
+                    send = *(encode_array+compress_length-1)<<4;
+                    //cout<< "send data:"<<(int)send<<" to mem"<<endl;
+                    memcpy(&DRAM[offset],&send,sizeof(uint8_t));
+                    offset +=sizeof(uint8_t);
                 }
-                offset +=sizeof(uint8_t);
-                send = *encode_array+j<<4;
-                send |= *encode_array+j+1>>8;
-                memcpy(&DRAM[offset],&send,sizeof(uint8_t));
-                 if(i==0)
+                else
                 {
-                    cout<<(int)send<<" ";
+                    uint8_t send=0;
+                    send = *(encode_array+j)>>4;
+                    memcpy(&DRAM[offset],&send,sizeof(uint8_t));
+                    offset +=sizeof(uint8_t);
+                    send = *(encode_array+j)<<4;
+                    send |= *(encode_array+j+1)>>8;
+                    memcpy(&DRAM[offset],&send,sizeof(uint8_t));
+                    offset +=sizeof(uint8_t);
+                    send = *(encode_array+j+1);
+                    memcpy(&DRAM[offset],&send,sizeof(uint8_t));
+                    offset +=sizeof(uint8_t);
                 }
-                offset +=sizeof(uint8_t);
-                send = *encode_array+j+1;
-                memcpy(&DRAM[offset],&send,sizeof(uint8_t));
-                 if(i==0)
-                {
-                    cout<<(int)send<<" ";
-                }
-                offset +=sizeof(uint8_t);
-             }
+            }
 		}
 		else
 		{
-            //cout<< "Write header:	"<<header<<"	to file"<<endl;
+            cout<< "Write header:	"<<header<<"	to position: "<<hex<<offset<<dec<<endl;
             memcpy(&DRAM[offset],&header,sizeof(uint32_t));
             offset +=sizeof(uint32_t);
 		}

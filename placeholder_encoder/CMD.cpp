@@ -13,12 +13,6 @@ Zhiye Zhang
 #include <unordered_map>
 #include "utility.h"
 using namespace std;
-#define WIN_SIZE 16
-#define PRIME 3
-#define MODULUS 256
-#define TARGET 0
-#define MAX_CHUNK 4096
-#define MAX_NUM 256
 uint64_t bad_hash(unsigned char * chunk,int chunk_length)
 {
     uint64_t hash=0;
