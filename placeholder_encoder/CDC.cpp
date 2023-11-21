@@ -10,88 +10,70 @@ Zhiye Zhang
 #include <math.h>
 #include <string.h>
 #include<iostream>
-#include "utility.h"
-
-uint64_t hash_func(unsigned char *input, unsigned int pos)//hash for cdc
+#include "utility.h"//all necessary function is here
+using namespace std;
+/*
+hash calculation for CDC, using code from hw2, 5.1.
+unsigned char *input:	input data
+unsigned int pos:		positon of data 
+*/
+uint64_t hash_func(unsigned char *input, unsigned int pos)
 {
 	uint64_t hash = 0;//initialize hash value
-	for(int i = 0; i < WIN_SIZE; i++)//calculating hash value for window
+	for(int i = 0; i < WIN_SIZE; i++)//WIN_SIZE is 16
 	{
-		hash += static_cast<uint64_t>(input[pos + WIN_SIZE - 1 - i]) * pow(PRIME, i + 1);
+		hash += static_cast<uint64_t>(input[pos + WIN_SIZE - 1 - i]) * pow(PRIME, i + 1);//PRIME is 3
+		/*
+				input[pos]	input[pos+1]	input[pos+2]	...			input[pos+WIN_SIZE-1]
+		hash =	*	   +	*		  +		*			+		+		*
+				3^16		3^15			3^14			...			3
+		*/
 	}
 	return hash;
 }
 
-int cdc(unsigned char *buff, unsigned int buff_size,  unsigned char ** chunk)//content defined chunking
+/*
+content defined chunking, using the code from hw2, 5.2 rolling hash
+unsigned char *buff:	input data
+unsigned int buff_size:	size of the input data
+unsigned char **chunk:	array of pointer of chunks 
+*/
+int cdc(unsigned char *buff, unsigned int buff_size,  unsigned char ** chunk)
 {
 	uint64_t hash = 0;//initialize hash value
-	int index=0;
-	unsigned int previous_i=0;
-	for(unsigned int i = WIN_SIZE; i < buff_size-WIN_SIZE; i++)//calculating cdc hash for buffer
+	int index=0;//the index of chunk
+	unsigned int previous_i=0;//the previous positon of input data
+	for(unsigned int i = WIN_SIZE; i < buff_size-WIN_SIZE; i++)//calculating cdc hash for input data, WIN_SIZE is 16
 	{
-		if(i == WIN_SIZE)//for the first time
+		if(i == WIN_SIZE)//for the first iteration
 		{
-        	hash = hash_func(buff, i);
+        	hash = hash_func(buff, i);//call hash_func
 		}
-		else//for other iteration
+		else//from the next iteration
 		{
-			hash = hash * PRIME - static_cast<uint64_t>(buff[i - 1]) * pow(PRIME, WIN_SIZE + 1) + static_cast<uint64_t>(buff[i - 1 + WIN_SIZE]) * PRIME;//rolling hash
+			hash = hash * PRIME - static_cast<uint64_t>(buff[i - 1]) * pow(PRIME, WIN_SIZE + 1) + static_cast<uint64_t>(buff[i - 1 + WIN_SIZE]) * PRIME;
+			//next_hash = 3*(current_hash-input[pos]*3^16+input[pos+WIN_SIZE])
 		}
-        if((hash % MODULUS) == TARGET || (i == buff_size-WIN_SIZE-1))//if hash met particular value
+        if((hash % MODULUS) == TARGET || (i == buff_size-WIN_SIZE-1))//MODULUS is 256, TARGET is 0
+		// if hash%256 = 0 or i reach the end of buff
 		{
-           chunk[index]=(unsigned char*)malloc(sizeof(unsigned char)* MAX_CHUNK);
-		   if(i<buff_size-WIN_SIZE-1)
+           chunk[index]=(unsigned char*)malloc(sizeof(unsigned char)* MAX_CHUNK);//create a chunk buffer for defined chunk, MAX_CHUNK is 8192
+		   // since we don't know how big the chunk is, we just create a buffer at maxium size 8192
+		   if(i<buff_size-WIN_SIZE-1)//if it is not the last buffer
 			{
-				memcpy(chunk[index],buff+previous_i,i-previous_i);
+				memcpy(chunk[index],buff+previous_i,i-previous_i);//copy the data (from previous boundary to current boundary)
 			}
 			else
 			{
-				memcpy(chunk[index],buff+previous_i,buff_size-previous_i);
+				memcpy(chunk[index],buff+previous_i,buff_size-previous_i);//copy the data (from previous boundary to the end of buffer)
 			}
-			index++;
-			previous_i=i;
+			index++;//chunk index increment
+			previous_i=i;//save the end boundary of last chunk as the start boundary of next chunk.
         }
     }
-    return index;
+    return index;//return how many chunk we defined
 }
-/*
-In cdc function, I created a bool array with the same size of buffer,
-whenver the cdc hash met target, the same index in arry is true,
-otherwise is false.
-*/
-// void create_chunks(unsigned char ** chunk,bool* boundary,unsigned char *buff, unsigned int buff_size)
-// {
-// 	int index=0;
-// 	unsigned int previous_i=0;
-// 	for(unsigned int i = WIN_SIZE; i < buff_size-WIN_SIZE; i++)
-// 	{
-// 		if((boundary[i]==true)|| (i == buff_size-WIN_SIZE-1))
-// 		{
-// 			chunk[index]=(unsigned char*)malloc(sizeof(unsigned char)* MAX_CHUNK);
-// 			if(i<buff_size-WIN_SIZE-1)
-// 			{
-// 				memcpy(chunk[index],buff+previous_i,i-previous_i);
-// 			}
-// 			else
-// 			{
-// 				memcpy(chunk[index],buff+previous_i,buff_size-previous_i);
-// 			}
-// 			index++;
-// 			previous_i=i;
-// 		}
-// 	}
-// }
-// void test_boundary(bool * boundary,int buff_size)//testing whehter the boundary array works
-// {
-// 	for(int i = WIN_SIZE; i < buff_size-WIN_SIZE; i++)
-// 	{
-// 		if(boundary [i]== true)
-// 		{
-// 			std::cout<< i << std::endl;
-// 		}
-// 	}
-// }
-void test_chunks(unsigned char ** chunks,int chunk_num)
+void test_chunks(unsigned char ** chunks,int chunk_num)//print out every defined chunk to check whether it works
 {
 	for(int i=0;i<chunk_num;i++)
 	{
@@ -100,8 +82,10 @@ void test_chunks(unsigned char ** chunks,int chunk_num)
 	}
 }
 
-void test_cdc( const char* file )//test whether the cdc function works
+void test_cdc( const char* file )//Read the file, run the cdc, and print the defined chunk
 {
+
+	//-------------------------File Read-------------------------
 	FILE* fp = fopen(file,"r" );
 	if(fp == NULL ){
 		perror("fopen error");
@@ -113,6 +97,7 @@ void test_cdc( const char* file )//test whether the cdc function works
 	fseek(fp, 0, SEEK_SET); // seek back to beginning of file
 
 	unsigned char* buff = (unsigned char *)malloc((sizeof(unsigned char) * file_size ));
+
 	if(buff == NULL)
 	{
 		perror("not enough space");
@@ -121,14 +106,15 @@ void test_cdc( const char* file )//test whether the cdc function works
 	}
 
 	fread(&buff[0],sizeof(unsigned char),file_size,fp);
+	//-----------------------------------------------------------
 	unsigned char* Chunk_array[MAX_NUM];
-	int chunks_num=cdc(buff,file_size,Chunk_array);
-	//test_chunks(Chunk_array,chunk_num);
+	int chunks_num=cdc(buff,file_size,Chunk_array);//call cdc here
+	test_chunks(Chunk_array,chunks_num);//test cdc here
     free(buff);
     return;
 }
 
-// int main()//main function use to test whether the cdc function works.
+// int main()
 // {
 // 	test_cdc("LittlePrince.txt");
 // 	return 0;

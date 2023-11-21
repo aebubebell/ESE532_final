@@ -1,7 +1,8 @@
 /*
-LZW encoding
+placeholder_encoder for software implementation
+from file to file
 Zhiye Zhang
-11/2/2001
+11/20/2001
 */
 //included library
 #include <stdio.h>
@@ -12,60 +13,17 @@ Zhiye Zhang
 #include <iostream> 
 #include <unordered_map>
 #include "utility.h"
+#include "stopwatch.h"
 #include<bits/stdc++.h>
-#include<fstream>
 using namespace std;
 
-/*
-Lempel–Ziv–Welch encoding for unqiue chunk, code from geek_to_geek, 
-URL:https://www.geeksforgeeks.org/lzw-lempel-ziv-welch-compression-technique/
-unsigned char* Chunk:   the content of unique chunk
-int *encode_array:      the encoded data output
-int &compress_lengh:    the number of element in encode array
-*/
-void LZWencoding(unsigned char* Chunk, int* encode_array,int& compress_length)
-{
-    std::map<std::string, int> dictionary;//dictionary for encoding
-    int nextCode = 256;//next code start from 256
-    int index = 0;//the index of encode array
-
-    // Initialize the dictionary with single character strings
-    for (int i = 0; i < 256; i++) {
-        dictionary[std::string(1, char(i))] = i;
-        //every character is 8-bit, letting 256 unique character
-    }
-    std::string P = "";//initialize string P is empty string
-    while (*Chunk != '\0') //if there is something in current Chunk pointer
-    {
-        char C = *Chunk;//char C equal to current pointer 
-        std::string PC = P + C;//PC equals to P+C
-        if (dictionary.find(PC) != dictionary.end()) //if PC is in the dictionary 
-        {
-            P = PC;//P equal to PC
-        } 
-        else //if PC is not in the dictionary
-        {
-            // Store the code for P in the compressed array
-            encode_array[index++] = dictionary[P];
-
-            // Add P + C to the dictionary
-            dictionary[PC] = nextCode++;
-            P = C;//P equal to C
-        }
-        Chunk++;
-
-    }
-    // Store the code for the last character in the compressed array
-    encode_array[index++] = dictionary[P];
-    compress_length = index;//compress length is the current index
-}
-void test_lzw( const char* file )//test lzw function
+int main()
 {
     //-------------------------File Read-------------------------
-	FILE* fp = fopen(file,"r" );
+	FILE* fp = fopen("LittlePrince.txt","r" );
 	if(fp == NULL ){
 		perror("fopen error");
-		return;
+		return 0;
 	}
 
 	fseek(fp, 0, SEEK_END); // seek to end of file
@@ -77,13 +35,17 @@ void test_lzw( const char* file )//test lzw function
 	{
 		perror("not enough space");
 		fclose(fp);
-		return;
+		return 0;
 	}
 
 	fread(&buff[0],sizeof(unsigned char),file_size,fp);
     //-----------------------------------------------------------
-	unsigned char* Chunk_array[MAX_NUM];
+    stopwatch CDC_timer, CMD_timer, LZW_timer,send_data_timer,total_timer;
+    total_timer.start();
+    unsigned char* Chunk_array[MAX_NUM];
+    CDC_timer.start();
 	int chunks_num = cdc(buff, file_size,Chunk_array);
+    CDC_timer.stop();
 	std::unordered_map<string,uint32_t> chunktable;
     unsigned char* DRAM;
     int offset=0;
@@ -92,16 +54,21 @@ void test_lzw( const char* file )//test lzw function
 	{
 		int chunk_length=MAX_CHUNK;
         uint32_t header=0;
+        CMD_timer.start();
 		header=cmd(Chunk_array[i],chunk_length,chunktable);
+        CMD_timer.stop();
 		if(header%2 ==0)
 		{
             int* encode_array= (int*)malloc(sizeof(int)*MAX_CHUNK);
             int compress_length=0;
+            LZW_timer.start();
             LZWencoding(Chunk_array[i],encode_array,compress_length);
+            LZW_timer.stop();
             uint32_t compress_byte=ceil((12*(float)compress_length)/8);
             header=(uint32_t)compress_byte<<1;
             memcpy(&DRAM[offset],&header,sizeof(uint32_t));
             offset +=sizeof(uint32_t);
+            send_data_timer.start();
             for(int j=0;j<compress_length;j+=2)
             {
                 if(compress_length-j == 1)
@@ -129,14 +96,24 @@ void test_lzw( const char* file )//test lzw function
                     offset +=sizeof(uint8_t);
                 }
             }
+            send_data_timer.stop();
 		}
 		else
 		{
+            send_data_timer.start();
             memcpy(&DRAM[offset],&header,sizeof(uint32_t));
             offset +=sizeof(uint32_t);
+            send_data_timer.stop();
 		}
         
 	}
+    total_timer.stop();
+    std::cout << "Total latency of CDC is: " << CDC_timer.latency() << " ns." << std::endl;
+    std::cout << "Total latency of CMD is: " << CMD_timer.latency() << " ns." << std::endl;
+    std::cout << "Total latency of LZW is: " << LZW_timer.latency() << " ns." << std::endl;
+    std::cout << "Total latency of send data is: " <<send_data_timer.latency() << " ns." << std::endl;
+    std::cout << "Total time is: " << total_timer.latency() << " ns." << std::endl;
+    std::cout << "---------------------------------------------------------------" << std::endl;
     FILE *outfd = fopen("compress.bin", "wb");
 	int bytes_written = fwrite(&DRAM[0], 1, offset, outfd);
 	fclose(outfd);
@@ -148,10 +125,5 @@ void test_lzw( const char* file )//test lzw function
     free(buff);
     free(DRAM);
   // Close the file when done
-    return;
+    return 0;
 }
-// int main()
-// {
-//     test_lzw("LittlePrince.txt");
-// 	return 0;
-// }
