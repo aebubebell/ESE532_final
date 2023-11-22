@@ -14,7 +14,7 @@
 
 int cdc(unsigned char *buff, unsigned int buff_size,unsigned char ** chunk);
 uint32_t cmd(unsigned char* chunk,int chunk_length,std::unordered_map<std::string,uint32_t>&chunktable);
-void sha256_process(uint32_t state[8], const uint8_t data[], uint32_t length);
+void sha256_process_arm(uint32_t state[8], const uint8_t data[], uint32_t length);
 void LZWencoding(unsigned char* Chunk, int* encode_array,int& compress_length);
 
 #endif

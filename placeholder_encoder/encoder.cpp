@@ -108,15 +108,18 @@ int main()
         
 	}
     total_timer.stop();
+    FILE *outfd = fopen("compress.bin", "wb");
+    int bytes_written = fwrite(&DRAM[0], 1, offset, outfd);
+    fclose(outfd);
     std::cout << "Total latency of CDC is: " << CDC_timer.latency() << " ns." << std::endl;
     std::cout << "Total latency of CMD is: " << CMD_timer.latency() << " ns." << std::endl;
     std::cout << "Total latency of LZW is: " << LZW_timer.latency() << " ns." << std::endl;
     std::cout << "Total latency of send data is: " <<send_data_timer.latency() << " ns." << std::endl;
     std::cout << "Total time is: " << total_timer.latency() << " ns." << std::endl;
+    float total_latency = total_timer.latency()/1000.0;
+    float output_throughput = (file_size * 8 / 1000000.0) / total_latency;
+    std::cout << "Output Throughput to DRAM: " << output_throughput << " Mb/s."<< " (Latency: " << total_latency << "s)." << std::endl;
     std::cout << "---------------------------------------------------------------" << std::endl;
-    FILE *outfd = fopen("compress.bin", "wb");
-	int bytes_written = fwrite(&DRAM[0], 1, offset, outfd);
-	fclose(outfd);
     cout<<"write "<<bytes_written<<" to file"<<endl;
     for(int i=0;i<chunks_num;i++)
     {

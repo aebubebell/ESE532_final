@@ -26,7 +26,7 @@ uint32_t cmd(unsigned char* chunk,int chunk_length,std::unordered_map<string,uin
 	string hash;//create a string to store 256 bit hash value
 	//initialize the state,which will carry the output later
 	uint32_t state[8] = {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
-	sha256_process(state,chunk,8192);//call the sha256 function
+	sha256_process_arm(state,chunk,8192);//call the sha256 function
 	//stack all the state to hash string
 	for(int i =0;i<8;i++)
 	{
@@ -67,7 +67,7 @@ void test_hash(unsigned char ** Chunks, int chunk_num)//test the sha256 function
     {
        string hash;
 	   uint32_t state[8] = {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
-	   sha256_process(state,Chunks[i],8192);
+	   sha256_process_arm(state,Chunks[i],8192);
 	   for(int j =0;j<8;j++)
 	   {
 		hash += to_string(state[j]);

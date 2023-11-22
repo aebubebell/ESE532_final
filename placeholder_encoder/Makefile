@@ -1,6 +1,8 @@
-CXX = g++
+CXX = aarch64-linux-gnu-g++
 CXXFLAGS = -std=c++11 -Wall -O3 -g -DNDEBUG -pthread
 LDFLAGS = -lpthread -pthread
+
+ARCH_FLAGS := -march=armv8-a+crc+crypto
 
 EXECUTABLES = cdc cmd lzw encoder
 
@@ -19,6 +21,6 @@ cmd: $(CMD_SRC)
 lzw: $(LZW_SRC)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@ $(LDFLAGS)
 encoder: $(ENCODER_SRC)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@ $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $(ARCH_FLAGS) $^ -o $@ $(LDFLAGS)
 clean:
 	$(RM) -rf perf* *.bin *.o *~ $(EXECUTABLES)
