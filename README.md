@@ -51,8 +51,13 @@ Output Throughput to DRAM: 1.41892 Mb/s. (Latency: 0.0803261s).
 ### (3) run on board , file to file, change ordinary sha into neon sha
 
 Total latency of CDC is: 0.60857 ns.
+
 Total latency of CMD is: 1.87715 ns.
+
 Total latency of LZW is: 7.66404 ns.
+
 Total latency of send data is: 0.01815 ns.
+
 Total time is: 10.6679 ns.
+
 Output Throughput to DRAM: 10.684 Mb/s. (Latency: 0.0106679s).
