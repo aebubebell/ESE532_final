@@ -15,41 +15,53 @@ Zhiye Zhang
 #include<bits/stdc++.h>
 #include<fstream>
 using namespace std;
+
+/*
+Lempel–Ziv–Welch encoding for unqiue chunk, code from geek_to_geek, 
+URL:https://www.geeksforgeeks.org/lzw-lempel-ziv-welch-compression-technique/
+unsigned char* Chunk:   the content of unique chunk
+int *encode_array:      the encoded data output
+int &compress_lengh:    the number of element in encode array
+*/
 void LZWencoding(unsigned char* Chunk, int* encode_array,int& compress_length)
 {
-       std::map<std::string, int> dictionary;
-    int nextCode = 256;
-    int index = 0;
+    std::map<std::string, int> dictionary;//dictionary for encoding
+    int nextCode = 256;//next code start from 256
+    int index = 0;//the index of encode array
 
     // Initialize the dictionary with single character strings
     for (int i = 0; i < 256; i++) {
         dictionary[std::string(1, char(i))] = i;
+        //every character is 8-bit, letting 256 unique character
     }
-
-    std::string P = "";
-    while (*Chunk != '\0') {
-        char C = *Chunk;
-        std::string PC = P + C;
-        if (dictionary.find(PC) != dictionary.end()) {
-            P = PC;
-        } else {
+    std::string P = "";//initialize string P is empty string
+    while (*Chunk != '\0') //if there is something in current Chunk pointer
+    {
+        char C = *Chunk;//char C equal to current pointer 
+        std::string PC = P + C;//PC equals to P+C
+        if (dictionary.find(PC) != dictionary.end()) //if PC is in the dictionary 
+        {
+            P = PC;//P equal to PC
+        } 
+        else //if PC is not in the dictionary
+        {
             // Store the code for P in the compressed array
             encode_array[index++] = dictionary[P];
 
             // Add P + C to the dictionary
             dictionary[PC] = nextCode++;
-            P = C;
+            P = C;//P equal to C
         }
-
         Chunk++;
-    }
 
+    }
     // Store the code for the last character in the compressed array
     encode_array[index++] = dictionary[P];
-    compress_length = index;
+    compress_length = index;//compress length is the current index
 }
-void test_lzw( const char* file )//test whether the cdc function works
+void test_lzw( const char* file )//test lzw function
 {
+    //-------------------------File Read-------------------------
 	FILE* fp = fopen(file,"r" );
 	if(fp == NULL ){
 		perror("fopen error");
@@ -69,55 +81,73 @@ void test_lzw( const char* file )//test whether the cdc function works
 	}
 
 	fread(&buff[0],sizeof(unsigned char),file_size,fp);
+    //-----------------------------------------------------------
 	unsigned char* Chunk_array[MAX_NUM];
 	int chunks_num = cdc(buff, file_size,Chunk_array);
-    //uint64_t* hash= (uint64_t*)malloc(sizeof(uint64_t)*chunks_num);
-   //test_hash(Chunk_array,chunks_num,hash);
 	std::unordered_map<string,uint32_t> chunktable;
-    ofstream outputFile("compress.bin"); // Open a file named "output.txt" for writing
-    if (outputFile.is_open())
-    {
-        //std::cout << "File open" << std::endl;
-    }
-    else
-    {
-        std::cerr << "Failed to open the file." << std::endl;
-    }
+    unsigned char* DRAM;
+    int offset=0;
+    DRAM = (unsigned char*)malloc(MAX_CHUNK*MAX_NUM);
 	for(int i=0;i<chunks_num;i++)
 	{
-		int chunk_length= 4096;
-        uint32_t header;
+		int chunk_length=MAX_CHUNK;
+        uint32_t header=0;
 		header=cmd(Chunk_array[i],chunk_length,chunktable);
 		if(header%2 ==0)
 		{
-            int* encode_array= (int*)malloc(sizeof(int)*MAX_NUM);
-            int compress_length;
-            LZWencoding(Chunk_array[0],encode_array,compress_length);
-            outputFile << header;
+            int* encode_array= (int*)malloc(sizeof(int)*MAX_CHUNK);
+            int compress_length=0;
+            LZWencoding(Chunk_array[i],encode_array,compress_length);
+            uint32_t compress_byte=ceil((12*(float)compress_length)/8);
+            header=(uint32_t)compress_byte<<1;
+            memcpy(&DRAM[offset],&header,sizeof(uint32_t));
+            offset +=sizeof(uint32_t);
             for(int j=0;j<compress_length;j+=2)
-             {
-                 uint8_t send=0;
-                // cout <<"The encode data1 is:"<<*(encode_array+j)<<endl;
-                // cout <<"The encode data2 is:"<<*(encode_array+j+1)<<endl;
-                send = ((uint8_t)*(encode_array+j))>>4;
-                outputFile << send;
-                // cout <<"The first Byte is:"<<std::hex<<(int)send<<endl;
-                send = (uint8_t)*(encode_array+j)<<4;
-                send |=(uint8_t)*(encode_array+j+1)>>8;
-                outputFile<<send;
-                // cout<<"The second Byte is:"<<std::hex<<(int)send<<endl;
-                send = (uint8_t)*(encode_array+j+1);
-                // cout<<"The third Byte is:"<<std::hex<<(int)send<<endl;
-             }
+            {
+                if(compress_length-j == 1)
+                {
+                    uint8_t send=0;
+                    send = *(encode_array+compress_length-1)>>4;
+                    memcpy(&DRAM[offset],&send,sizeof(uint8_t));
+                    offset +=sizeof(uint8_t);
+                    send = *(encode_array+compress_length-1)<<4;
+                    memcpy(&DRAM[offset],&send,sizeof(uint8_t));
+                    offset +=sizeof(uint8_t);
+                }
+                else
+                {
+                    uint8_t send=0;
+                    send = *(encode_array+j)>>4;
+                    memcpy(&DRAM[offset],&send,sizeof(uint8_t));
+                    offset +=sizeof(uint8_t);
+                    send = *(encode_array+j)<<4;
+                    send |= *(encode_array+j+1)>>8;
+                    memcpy(&DRAM[offset],&send,sizeof(uint8_t));
+                    offset +=sizeof(uint8_t);
+                    send = *(encode_array+j+1);
+                    memcpy(&DRAM[offset],&send,sizeof(uint8_t));
+                    offset +=sizeof(uint8_t);
+                }
+            }
 		}
 		else
 		{
-            outputFile << header;
+            memcpy(&DRAM[offset],&header,sizeof(uint32_t));
+            offset +=sizeof(uint32_t);
 		}
-
+        
 	}
+    FILE *outfd = fopen("compress.bin", "wb");
+	int bytes_written = fwrite(&DRAM[0], 1, offset, outfd);
+	fclose(outfd);
+    cout<<"write "<<bytes_written<<" to file"<<endl;
+    for(int i=0;i<chunks_num;i++)
+    {
+        free(Chunk_array[i]);
+    }
     free(buff);
-    outputFile.close(); // Close the file when done
+    free(DRAM);
+  // Close the file when done
     return;
 }
 // int main()
