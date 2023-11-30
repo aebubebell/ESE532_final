@@ -1,0 +1,10 @@
+/* linux */
+the_ROM_image:
+{
+  [fsbl_config] a53_x64
+  [bootloader] /mnt/castor/seas_home/e/ese5320/u96v2_sbc_base/sw/u96v2_sbc_base/boot/fsbl.elf
+  [pmufw_image] /mnt/castor/seas_home/e/ese5320/u96v2_sbc_base/sw/u96v2_sbc_base/boot/pmufw.elf
+  [destination_device=pl] /mnt/castor/seas_home/z/zhiyez/Desktop/ese532_code/LZW_acc/package.build/package/system.bit
+  [destination_cpu=a53-0, exception_level=el-3, trustzone] /mnt/castor/seas_home/e/ese5320/u96v2_sbc_base/sw/u96v2_sbc_base/boot/bl31.elf
+  [destination_cpu=a53-0, exception_level=el-2] /mnt/castor/seas_home/e/ese5320/u96v2_sbc_base/sw/u96v2_sbc_base/boot/u-boot.elf
+}
